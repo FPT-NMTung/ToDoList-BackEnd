@@ -123,8 +123,15 @@ class GroupController {
       .then(([data]) => {
         dataResult = data
       })
+  }
 
-
+  addMember = async (req, res, next) => {
+    const idUsers = req.idUsers
+    // body gom idGroups, idUsers va emailMember
+    // check quyen cua idUsers co phai la owner cua idGroups hay khong
+    // check idGroups co ton tai hay khong
+    // check emailMember co ton tai hay khong
+    // add vao bang UsersAndGroups
   }
 }
 

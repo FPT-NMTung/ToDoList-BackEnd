@@ -3,6 +3,7 @@ const bodyParser = require('body-parser')
 const http = require('http')
 const socketio = require('socket.io')
 const app = express()
+require('dotenv').config()
 
 const server = http.createServer(app)
 const io = socketio(server, {

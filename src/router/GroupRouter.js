@@ -18,4 +18,7 @@ router.delete('/delete', AuthRouter, GroupController.delete)
 // [GET]
 router.get('/getAllMember', AuthRouter, GroupController.getAllMember)
 
+// [PUT]
+router.put('/addMember', AuthRouter, GroupController.addMember)
+
 module.exports = router
