@@ -12,13 +12,16 @@ router.get('/getInfo/:idGroups', AuthRouter, GroupController.checkBelongGroup)
 // [GET]
 router.get('/getAllGroups', AuthRouter, GroupController.getAllGroups)
 
-// [GET]
+// [DELETE]
 router.delete('/delete', AuthRouter, GroupController.delete)
 
 // [GET]
-router.get('/getAllMember', AuthRouter, GroupController.getAllMember)
+router.get('/getAllMember/:idGroups', AuthRouter, GroupController.getAllMember)
 
 // [PUT]
 router.put('/addMember', AuthRouter, GroupController.addMember)
+
+// [DELETE]
+router.delete('/removeMember', AuthRouter, GroupController.removeMember)
 
 module.exports = router
