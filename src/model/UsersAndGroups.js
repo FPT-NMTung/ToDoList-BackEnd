@@ -27,4 +27,9 @@ module.exports = class UsersAndGroups {
     return db.execute('select * from usersAndGroups where idUsers = ? and idGroups = ?',
       [idUsers, idGroups])
   }
+
+  static deleteMember = (idGroups, idUsers) => {
+    return db.execute('delete from usersAndGroups where idUsers = ? and idGroups = ?',
+      [idUsers, idGroups])
+  }
 }

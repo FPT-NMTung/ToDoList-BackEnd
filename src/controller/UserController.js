@@ -4,35 +4,28 @@ const jwt = require('jsonwebtoken')
 const {SendMail} = require('./SendEmail')
 const md5 = require('md5')
 const {cloudinary} = require('../util/cloudinary')
+const {validateStringNotEmpty} = require('../CommonMethod')
 
 class UserController {
   create = async (req, res, next) => {
 
-    //<editor-fold desc="Check data">
-    let name = ''
-    let email = ''
-    let password = ''
+    let [name, nameStatus] = validateStringNotEmpty(req.body.name)
+    let [email, emailStatus] = validateStringNotEmpty(req.body.email)
+    let [password, passwordStatus] = validateStringNotEmpty(req.body.password)
 
-    try {
-      name = req.body.name.trim()
-      email = req.body.email.trim()
-      password = req.body.password.trim()
-    } catch (e) {
-      res.status(422).json({
-        code: 8840002,
+    if (!nameStatus || !emailStatus || !passwordStatus) {
+      return res.status(422).json({
+        code: 8840001,
+        message: 'Name, email or password does not exist or is not valid',
       })
-      return
     }
 
-    const check = !(name.length > 0) || !(email.includes('@')) || !(password.length >= 8)
-
-    if (check) {
-      res.status(422).json({
+    if (!(name.length > 0) || !(email.includes('@')) || !(password.length >= 8)) {
+      return res.status(422).json({
         code: 8840002,
+        message: 'Name, email or password does not format',
       })
-      return
     }
-    //</editor-fold>
 
     let isExistEmail = false
     await Users.getUserByEmail(email)
@@ -41,10 +34,10 @@ class UserController {
       })
 
     if (isExistEmail) {
-      res.status(422).json({
-        code: 8840001,
+      return res.status(422).json({
+        code: 8840003,
+        message: 'Email is already exist',
       })
-      return
     }
 
     const data = bcrypt.hashSync(password, 10)
@@ -57,11 +50,7 @@ class UserController {
         charactersLength))
     }
 
-    const newUser = new Users(name, email, data, tokenActive)
-    await newUser.save()
-
     const url = `http://localhost:3000/active-account?token=${tokenActive}`
-
     const content = {
       to: [email],
       from: 'nmtung.temp@gmail.com',
@@ -71,32 +60,35 @@ class UserController {
       html: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Document</title><style>body{display:flex;flex-direction:column;align-items:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,'Open Sans','Helvetica Neue',sans-serif}.body{width:700px;background:rgb(237, 193, 211);background:linear-gradient(138deg, rgba(237, 193, 211, 1) 0%, rgba(145, 189, 236, 1) 100%);padding:60px}.main{background-color:white;padding:20px 40px;border-radius:20px}.infomation{text-align:center;font-size:12px}.infomation>p{margin:4px}.link{margin:30px 0}.link>a{text-decoration:none;color:white;padding:12px 16px;background-color:#a045e1;border-radius:4px;font-weight:bold}.title{text-align:center}.name>p{margin:4px;font-size:12px}</style></head><body><div class="body"><div class="main"><div class="title"><h2>Verify account</h3></div><hr><div class="content"><p>Hi <b>${name}</b>,</p><p>Thanks for signing up to To Do List, great to have you!</p><p>Please verify your email address by clicking the link below.</p></div><div class="link"> <a href="` + url + `">Verify account</a></div><div class="name"><p>Regards,</p><p>NMTung 💜</p></div><hr><div class="infomation"><p><i>Please feel free to contact us at nmtung.study@gmail.com.</i></p></div></div></div></body></html>`,
     }
 
-    SendMail.sendMail(content, function (err, a) {
-      if (!err) {
-        res.status(201).json({
-          code: 8820001,
-        })
-        return
-      }
+    let isSendErr
+    await SendMail.sendMail(content, function (err, a) {
+      isSendErr = err
+    })
 
-      res.status(500).json({
-        code: 8840007,
+    if (isSendErr) {
+      return res.status(422).json({
+        code: 8840004,
+        message: 'Send mail active fail',
       })
+    }
+
+    const newUser = new Users(name, email, data, tokenActive)
+    await newUser.save()
+
+    return res.status(200).json({
+      message: 'Create user successfully',
     })
   }
 
   login = async (req, res, next) => {
-    let email = ''
-    let password = ''
+    let [email, emailStatus] = validateStringNotEmpty(req.body.email)
+    let [password, passwordStatus] = validateStringNotEmpty(req.body.password)
 
-    try {
-      email = req.body.email.trim()
-      password = req.body.password.trim()
-    } catch (e) {
-      res.status(422).json({
-        code: 8840002,
+    if (!emailStatus || !passwordStatus) {
+      return res.status(422).json({
+        code: 8840005,
+        message: 'Email or password does not exist or is not valid',
       })
-      return
     }
 
     let userArray
@@ -106,27 +98,27 @@ class UserController {
       })
 
     if (userArray.length === 0) {
-      res.status(422).json({
-        code: 8840003,
+      return res.status(422).json({
+        code: 8840006,
+        message: 'Email or password is incorrect',
       })
-      return
     }
 
     const select = userArray[0]
     const isMatch = bcrypt.compareSync(password, select.password)
 
     if (!isMatch) {
-      res.status(422).json({
-        code: 8840003,
+      return res.status(422).json({
+        code: 8840006,
+        message: 'Email or password is incorrect',
       })
-      return
     }
 
     if (select.tokenActiveAccount) {
-      res.status(422).json({
-        code: 8840010,
+      return res.status(422).json({
+        code: 8840007,
+        message: 'Account is not active',
       })
-      return
     }
 
     const token = jwt.sign({
@@ -146,24 +138,21 @@ class UserController {
   changePassword = async (req, res, next) => {
     const idUsers = req.idUsers
 
-    let oddPass
-    let newPass
+    let [oldPassword, oldPasswordStatus] = validateStringNotEmpty(req.body.oldPassword)
+    let [newPassword, newPasswordStatus] = validateStringNotEmpty(req.body.newPassword)
 
-    try {
-      oddPass = req.body.oddPassword.trim()
-      newPass = req.body.newPassword.trim()
-    } catch (e) {
-      res.status(422).json({
-        code: 8840002,
+    if (!oldPasswordStatus || !newPasswordStatus) {
+      return res.status(422).json({
+        code: 8840008,
+        message: 'Old password or new password does not exist or is not valid',
       })
-      return
     }
 
-    if (oddPass === newPass) {
-      res.status(422).json({
-        code: 8840004,
+    if (oldPassword === newPassword) {
+      return res.status(422).json({
+        code: 8840009,
+        message: 'Old password and new password are the same',
       })
-      return
     }
 
     let userArray
@@ -173,43 +162,40 @@ class UserController {
       })
 
     if (userArray.length === 0) {
-      res.status(401).json({
-        message: 'Not authenticated',
+      return res.status(422).json({
+        code: 8840010,
+        message: 'User does not exist',
       })
-      return
     }
 
     const user = userArray[0]
-    const check = bcrypt.compareSync(oddPass, user.password)
+    const check = bcrypt.compareSync(oldPassword, user.password)
 
     if (!check) {
-      res.status(422).json({
-        code: 8840005,
+      return res.status(422).json({
+        code: 8840011,
+        message: 'Old password is incorrect',
       })
-      return
     }
 
-    const hashPass = bcrypt.hashSync(newPass, 10)
+    const hashPass = bcrypt.hashSync(newPassword, 10)
     const newUser = new Users(user.name, user.email, hashPass)
 
     await newUser.update(user.idUsers)
 
-    res.status(200).json({
-      code: 8820002,
+    return res.status(200).json({
+      message: 'Change password successfully',
     })
-    return
   }
 
   resetPassword = async (req, res, next) => {
-    let email
+    let [email, emailStatus] = validateStringNotEmpty(req.body.email)
 
-    try {
-      email = req.body.email
-    } catch (e) {
-      res.status(422).json({
-        code: 8840002,
+    if (!emailStatus) {
+      return res.status(422).json({
+        code: 8840012,
+        message: 'Email does not exist or is not valid',
       })
-      return
     }
 
     let usersArray
@@ -219,10 +205,10 @@ class UserController {
       })
 
     if (usersArray.length === 0) {
-      res.status(422).json({
-        code: 8840006,
+      return res.status(422).json({
+        code: 8840013,
+        message: 'User does not exist',
       })
-      return
     }
 
     const user = usersArray[0]
@@ -255,37 +241,33 @@ class UserController {
     }
 
     let isErrorSendEmail = false
-    SendMail.sendMail(content, function (err, a) {
+    await SendMail.sendMail(content, function (err, a) {
       if (err) {
         isErrorSendEmail = true
       }
+    })
 
-      if (isErrorSendEmail) {
-        res.status(500).json({
-          code: 8840007,
-        })
-        return
-      }
-
-      res.status(200).json({
-        code: 8820003,
+    if (isErrorSendEmail) {
+      return res.status(500).json({
+        code: 8840014,
+        message: 'Error send email reset password',
       })
-      return
+    }
+
+    return res.status(200).json({
+      message: 'Send email reset password successfully',
     })
   }
 
   checkTokenResetPassword = async (req, res, next) => {
-    let id
-    let token
+    let [id, idStatus] = validateStringNotEmpty(req.body.token)
+    let [token, tokenStatus] = validateStringNotEmpty(req.body.token)
 
-    try {
-      id = req.body.id.trim()
-      token = req.body.token.trim()
-    } catch (e) {
-      res.status(422).json({
-        code: 8840002,
+    if (!idStatus || !tokenStatus) {
+      return res.status(422).json({
+        code: 8840015,
+        message: 'Token does not exist or is not valid',
       })
-      return
     }
 
     let userArray
@@ -295,37 +277,35 @@ class UserController {
       })
 
     if (userArray.length === 0) {
-      res.status(422).json({
-        code: 8840008,
+      return res.status(422).json({
+        code: 8840016,
+        message: 'User does not exist',
       })
-      return
     }
 
     const user = userArray[0]
 
     if (user.tokenResetPasswordExp >= new Date()) {
       res.status(200).json({
-        code: 8820004,
+        message: 'Token reset password is valid',
       })
     } else {
       res.status(422).json({
-        code: 8840009,
+        code: 8840017,
+        message: 'Token reset password is expired',
       })
     }
   }
 
   changePasswordByResetPassword = async (req, res, next) => {
-    let token
-    let pass
+    let [token, tokenStatus] = validateStringNotEmpty(req.body.token)
+    let [password, passwordStatus] = validateStringNotEmpty(req.body.password)
 
-    try {
-      token = req.body.token.trim()
-      pass = req.body.password.trim()
-    } catch (e) {
-      res.status(422).json({
-        code: 8840002,
+    if (!tokenStatus || !passwordStatus) {
+      return res.status(422).json({
+        code: 8840018,
+        message: 'Token and password does not exist or is not valid',
       })
-      return
     }
 
     let userArray
@@ -335,33 +315,30 @@ class UserController {
       })
 
     if (userArray.length === 0) {
-      res.status(422).json({
-        code: 8840008,
+      return res.status(422).json({
+        code: 8840019,
+        message: 'User does not exist',
       })
-      return
     }
 
     const user = userArray[0]
-
-    const hashPass = bcrypt.hashSync(pass, 10)
+    const hashPass = bcrypt.hashSync(password, 10)
 
     await Users.updatePasswordByTokenReset(hashPass, user.idUsers)
 
     res.status(200).json({
-      code: 8820002,
+      message: 'Change password successfully',
     })
   }
 
   checkTokenActiveAccount = async (req, res, next) => {
-    let token
+    let [token, tokenStatus] = validateStringNotEmpty(req.body.token)
 
-    try {
-      token = req.body.token.trim()
-    } catch (e) {
-      res.status(422).json({
-        code: 8840002,
+    if (!tokenStatus) {
+      return res.status(422).json({
+        code: 8840020,
+        message: 'Token does not exist or is not valid',
       })
-      return
     }
 
     let userArray
@@ -371,28 +348,25 @@ class UserController {
       })
 
     if (userArray.length === 0) {
-      res.status(422).json({
-        code: 8840009,
+      return res.status(422).json({
+        code: 8840021,
+        message: 'User does not exist',
       })
-      return
     } else {
-      res.status(200).json({
-        code: 8820004,
+      return res.status(200).json({
+        message: 'Token active account is valid',
       })
-      return
     }
   }
 
   activeAccount = async (req, res, next) => {
-    let token
+    let [token, tokenStatus] = validateStringNotEmpty(req.body.token)
 
-    try {
-      token = req.body.token.trim()
-    } catch (e) {
-      res.status(422).json({
-        code: 8840002,
+    if (!tokenStatus) {
+      return res.status(422).json({
+        code: 8840022,
+        message: 'Token does not exist or is not valid',
       })
-      return
     }
 
     let userArray = []
@@ -402,30 +376,28 @@ class UserController {
       })
 
     if (userArray.length === 0) {
-      res.status(422).json({
-        code: 8840009,
+      return res.status(422).json({
+        code: 8840023,
+        message: 'User does not exist',
       })
-      return
     }
 
     let user = userArray[0]
     await Users.activeAccount(user.idUsers)
 
-    res.status(200).json({
-      code: 8820005,
+    return res.status(200).json({
+      message: 'Active account successfully',
     })
   }
 
   getInformation = async (req, res, next) => {
-    let id
+    let [id, idStatus] = validateStringNotEmpty(req.params.idUsers)
 
-    try {
-      id = req.params.idUsers
-    } catch (e) {
-      res.status(422).json({
-        code: 8840002,
+    if (!idStatus) {
+      return res.status(422).json({
+        code: 8840024,
+        message: 'idUsers does not exist or is not valid',
       })
-      return
     }
 
     let arrayUser = []
@@ -435,10 +407,10 @@ class UserController {
       })
 
     if (arrayUser.length === 0) {
-      res.status(422).json({
-        code: 8840008,
+      return res.status(422).json({
+        code: 8840025,
+        message: 'User does not exist',
       })
-      return
     }
 
     const {idUsers, name, email, avatar} = arrayUser[0]
@@ -452,18 +424,15 @@ class UserController {
   }
 
   changeAvatar = async (req, res, next) => {
-
     const idUsers = req.idUsers
 
-    let imageBase64
+    let [imageBase64, imageBase64Status] = validateStringNotEmpty(req.body.image)
 
-    try {
-      imageBase64 = req.body.image.trim()
-    } catch (e) {
-      res.status(422).json({
-        code: 8840002,
+    if (!imageBase64Status) {
+      return res.status(422).json({
+        code: 8840026,
+        message: 'Image does not exist or is not valid',
       })
-      return
     }
 
     let url

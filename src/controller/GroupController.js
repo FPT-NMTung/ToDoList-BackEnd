@@ -201,7 +201,36 @@ class GroupController {
   }
 
   removeMember = async (req, res, next) => {
+    const idUsers = req.idUsers
 
+    const [idGroups, idGroupsStatus] = validateNumber(req.body.idGroups)
+    const [idUsersMember, idUsersMemberStatus] = validateNumber(req.body.idUsersMember)
+
+    if (idGroupsStatus === false || idUsersMemberStatus === false) {
+      res.status(422).json({
+        code: 8840017,
+      })
+      return
+    }
+
+    let isOwner = false
+    await Groups.checkOwnerGroup(idGroups, idUsers)
+      .then(([data]) => {
+        isOwner = data.length !== 0
+      })
+
+    if (isOwner === false) {
+      res.status(422).json({
+        code: 8840017,
+      })
+      return
+    }
+
+    await UsersAndGroups.deleteMember(idGroups, idUsersMember)
+
+    res.status(200).json({
+      code: 8820012,
+    })
   }
 }
 

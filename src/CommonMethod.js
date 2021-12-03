@@ -13,7 +13,7 @@ module.exports.validateNumber = (value) => {
 
 module.exports.validateString = (value) => {
     if (typeof value === 'string') {
-      return [value, true];
+      return [value.trim(), true];
     }
 
     return [undefined, false];
@@ -21,7 +21,7 @@ module.exports.validateString = (value) => {
 
 module.exports.validateStringNotEmpty = (value) => {
     if (typeof value === 'string' && value.trim().length > 0) {
-      return [value, true];
+      return [value.trim(), true];
     }
 
     return [undefined, false];
