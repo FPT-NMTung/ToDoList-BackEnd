@@ -10,13 +10,13 @@ class TasksController {
     let [severity, statusSevere] = validateNumber(req.body.severity)
     let [member, statusMember] = validateArray(req.body.member)
     let [idGroups, statusGroups] = validateNumber(req.body.idGroups)
-    let dataResult
 
-    if (statusName === false || statusSevere === false || statusMember === false || statusGroups === false) {
-      res.status(422).json({
-        code: 8840013,
+    let dataResult
+    if (!statusName || !statusSevere || !statusMember || !statusGroups) {
+      return res.status(400).json({
+        code: 8840040,
+        message: 'Name, Severity, Member, IdGroups is required'
       })
-      return
     }
 
     await UsersAndGroups.getInfo(idUsers, idGroups)
@@ -25,18 +25,17 @@ class TasksController {
       })
 
     if (dataResult.length === 0) {
-      // log error
-      res.status(422).json({
-        code: 8840013,
+      return res.status(400).json({
+        code: 8840041,
+        message: 'IdGroups is not exist'
       })
-      return
     }
 
     const newTask = new Tasks(idGroups, name, 0, severity, 0, 0, [idUsers, ...member], idUsers)
     await newTask.save()
 
     res.status(201).json({
-      code: 8820008,
+      message: 'Create task success'
     })
   }
 
@@ -46,10 +45,10 @@ class TasksController {
     let [idGroups, statusIdGroups] = validateNumber(req.params.idGroups)
 
     if (statusIdGroups === false) {
-      res.status(422).json({
-        code: 8840014,
+      return res.status(422).json({
+        code: 8840042,
+        message: 'IdGroups is required'
       })
-      return
     }
 
     let dataResult
@@ -76,7 +75,6 @@ class TasksController {
     })
 
     res.status(200).json({
-      code: 8820009,
       data: dataResult,
     })
   }

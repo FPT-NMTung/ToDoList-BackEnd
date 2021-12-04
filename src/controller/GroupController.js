@@ -7,15 +7,13 @@ class GroupController {
   create = async (req, res, next) => {
     const idUsers = req.idUsers
 
-    let name
+    let [name, nameStatus] = validateStringNotEmpty(req.body.name)
 
-    try {
-      name = req.body.name.trim()
-    } catch (e) {
-      res.status(422).json({
-        code: 8840002,
+    if (!nameStatus) {
+      return res.status(422).json({
+        code: 8840027,
+        message: 'Name does not exist or is not valid'
       })
-      return
     }
 
     let idGroups
@@ -27,23 +25,21 @@ class GroupController {
 
     await new UsersAndGroups(idUsers, idGroups, true, 1).save()
 
-    res.status(201).json({
-      code: 8820006,
-      idGroups: idGroups,
+    res.status(200).json({
+      message: 'Create group successfully'
     })
   }
 
   checkBelongGroup = async (req, res, next) => {
     const idUsers = req.idUsers
 
-    let idGroups
-    try {
-      idGroups = req.params.idGroups.trim()
-    } catch (e) {
-      res.status(422).json({
-        code: 8840002,
+    let [idGroups, idGroupsStatus] = validateNumber(req.params.idGroups)
+
+    if (!idGroupsStatus) {
+      return res.status(422).json({
+        code: 8840028,
+        message: 'Id groups does not exist or is not valid'
       })
-      return
     }
 
     let arrayResult = []
@@ -53,10 +49,10 @@ class GroupController {
       })
 
     if (arrayResult.length === 0) {
-      res.status(422).json({
-        code: 8840011,
+      return res.status(422).json({
+        code: 8840029,
+        message: 'User does not belong to the group'
       })
-      return
     }
 
     res.status(200).json({})
@@ -78,28 +74,26 @@ class GroupController {
 
   delete = async (req, res, next) => {
     const idUsers = req.idUsers
-    let idGroups
+    let [idGroups, idGroupsStatus] = validateNumber(req.body.idGroups)
 
-    try {
-      idGroups = Number.parseInt(req.body.idGroups.trim())
-    } catch (e) {
-      res.status(422).json({
-        code: 8840012,
+    if (!idGroupsStatus) {
+      return res.status(422).json({
+        code: 8840030,
+        message: 'Id groups does not exist or is not valid'
       })
-      return
     }
-    let resultData
 
+    let resultData
     await Groups.checkOwnerGroup(idGroups, idUsers)
       .then(([data]) => {
         resultData = data
       })
 
     if (resultData.length === 0) {
-      res.status(422).json({
-        code: 8840012,
+      return res.status(422).json({
+        code: 8840031,
+        message: 'User does not own the group'
       })
-      return
     }
 
     await Groups.deleteGroup(idGroups)
@@ -113,10 +107,10 @@ class GroupController {
     const [idGroups, idGroupsStatus] = validateNumber(req.params.idGroups)
 
     if (idGroupsStatus === false) {
-      res.status(422).json({
-        code: 8840015,
+      return res.status(422).json({
+        code: 8840032,
+        message: 'Id groups does not exist or is not valid'
       })
-      return
     }
 
     let dataResult
@@ -126,7 +120,6 @@ class GroupController {
       })
 
     res.status(200).json({
-      code: 8820010,
       data: dataResult,
     })
   }
@@ -138,17 +131,17 @@ class GroupController {
     const [emailMember, emailMemberStatus] = validateStringNotEmpty(req.body.emailMember.trim())
 
     if (idGroupsStatus === false || emailMemberStatus === false) {
-      res.status(422).json({
-        code: 8840016,
+      return res.status(422).json({
+        code: 8840033,
+        message: 'Id groups or email member does not exist or is not valid'
       })
-      return
     }
 
     if (req.email === emailMember) {
-      res.status(422).json({
-        code: 8840016,
+      return res.status(422).json({
+        code: 8840034,
+        message: 'You cannot add yourself to the group'
       })
-      return
     }
 
     // check quyen cua idUsers co phai la owner cua idGroups hay khong
@@ -159,10 +152,10 @@ class GroupController {
       })
 
     if (isOwner === false) {
-      res.status(422).json({
-        code: 8840016,
+      return res.status(422).json({
+        code: 8840035,
+        message: 'User does not own the group'
       })
-      return
     }
 
     // check emailMember co ton tai hay khong
@@ -173,10 +166,10 @@ class GroupController {
       })
 
     if (dataUser.length === 0) {
-      res.status(422).json({
-        code: 8840016,
+      return res.status(422).json({
+        code: 8840036,
+        message: 'Email member does not exist'
       })
-      return
     }
 
     let isExist = false
@@ -186,17 +179,17 @@ class GroupController {
       })
 
     if (isExist === true) {
-      res.status(422).json({
-        code: 8840016,
+      return res.status(422).json({
+        code: 8840037,
+        message: 'Email member is already in the group'
       })
-      return
     }
 
     // add vao bang UsersAndGroups
     await new UsersAndGroups(dataUser[0].idUsers, idGroups, false, 1).save()
 
     res.status(200).json({
-      code: 8820011,
+      message: 'Add member successfully',
     })
   }
 
@@ -207,10 +200,10 @@ class GroupController {
     const [idUsersMember, idUsersMemberStatus] = validateNumber(req.body.idUsersMember)
 
     if (idGroupsStatus === false || idUsersMemberStatus === false) {
-      res.status(422).json({
-        code: 8840017,
+      return res.status(422).json({
+        code: 8840038,
+        message: 'Id groups or id users member does not exist or is not valid'
       })
-      return
     }
 
     let isOwner = false
@@ -220,16 +213,16 @@ class GroupController {
       })
 
     if (isOwner === false) {
-      res.status(422).json({
-        code: 8840017,
+      return res.status(422).json({
+        code: 8840039,
+        message: 'User does not own the group'
       })
-      return
     }
 
     await UsersAndGroups.deleteMember(idGroups, idUsersMember)
 
     res.status(200).json({
-      code: 8820012,
+      message: 'Remove member successfully',
     })
   }
 }
