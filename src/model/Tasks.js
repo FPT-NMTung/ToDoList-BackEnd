@@ -18,8 +18,8 @@ module.exports = class Tasks {
   }
 
   static getAllTasksForUser = (idGroups, idUsers) => {
-    return db.execute('SELECT * FROM project_todolist.tasks where idGroups = 44 and JSON_CONTAINS(members, \'' + idUsers + '\');',
-      [idGroups, idUsers])
+    return db.execute('SELECT * FROM project_todolist.tasks where idGroups = ? and JSON_CONTAINS(members, \'' + idUsers + '\');',
+      [idGroups])
   }
 
   save = () => {
