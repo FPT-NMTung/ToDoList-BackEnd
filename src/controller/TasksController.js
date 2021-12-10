@@ -64,13 +64,71 @@ class TasksController {
       })
 
     dataResult.map((task) => {
-      const temp = task.members.map((member) => {
-        const findMember = dataUsers.find((user) => {
+      task.members = task.members.map((member) => {
+        return dataUsers.find((user) => {
           return user.idUsers === member
         })
-        return findMember
       })
-      task.members = temp
+      return task
+    })
+
+    res.status(200).json({
+      data: dataResult,
+    })
+  }
+
+  getAllTasksForAdmin = async (req, res, next) => {
+    const idUsers = req.idUsers
+
+    let [idGroups, statusIdGroups] = validateNumber(req.params.idGroups)
+
+    if (statusIdGroups === false) {
+      return res.status(422).json({
+        code: 8840045,
+        message: 'IdGroups is required'
+      })
+    }
+
+    let isOwner = false
+    await UsersAndGroups.checkOwnerGroups(idGroups, idUsers)
+      .then(([data]) => {
+        isOwner = data.length > 0
+      })
+
+    if (isOwner === false) {
+      return res.status(400).json({
+        code: 8840046,
+        message: 'You are not owner of this group'
+      })
+    }
+
+    let dataResult
+    await Tasks.getAllTasksForAdmin(idGroups)
+      .then(([data]) => {
+        dataResult = data
+      })
+
+    let dataUsers
+    await UsersAndGroups.getAllMember(idGroups)
+      .then(([data]) => {
+        dataUsers = data
+      })
+
+    dataResult.map((task) => {
+      task.members = task.members.map((member) => {
+        const temp = dataUsers.find((user) => {
+          return user.idUsers === member
+        })
+        if (temp) {
+          return temp
+        } else {
+          return {
+            idUsers: member,
+            name: 'Unknown',
+            avatar: null,
+          }
+        }
+      })
       return task
     })
 

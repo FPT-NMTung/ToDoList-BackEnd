@@ -12,6 +12,11 @@ module.exports = class Tasks {
     this.author = author
   }
 
+  save = () => {
+    return db.execute('INSERT INTO `Project_ToDoList`.`Tasks`(`idGroups`,`name`,`status`,`type`,`isCompleted`,`isDelete`,`members`,`author`)VALUES(?,?,?,?,?,?,?,?);',
+      [this.idGroups, this.name, this.status, this.type, this.isComplete, this.isDelete, this.member, this.author])
+  }
+
   static delete = (idTasks) => {
     return db.execute('DELETE FROM `Project_ToDoList`.`tasks` WHERE idTasks = ?;',
       [idTasks])
@@ -22,13 +27,8 @@ module.exports = class Tasks {
       [idGroups])
   }
 
-  save = () => {
-    return db.execute('INSERT INTO `Project_ToDoList`.`Tasks`(`idGroups`,`name`,`status`,`type`,`isCompleted`,`isDelete`,`members`,`author`)VALUES(?,?,?,?,?,?,?,?);',
-      [this.idGroups, this.name, this.status, this.type, this.isComplete, this.isDelete, this.member, this.author])
+  static getAllTasksForAdmin = (idGroups) => {
+    return db.execute('SELECT * FROM project_todolist.tasks where idGroups = ?;',
+      [idGroups])
   }
-
-  // static getAllTasksForAuthor = (idGroups, idUsers) => {
-  //   return db.execute('SELECT * FROM `project_todolist`.`tasks` WHERE isDelete = 0 AND author = ?;',
-  //     [idUsers])
-  // }
 }

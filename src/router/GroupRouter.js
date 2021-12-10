@@ -24,4 +24,7 @@ router.put('/addMember', AuthRouter, GroupController.addMember)
 // [DELETE]
 router.delete('/removeMember', AuthRouter, GroupController.removeMember)
 
+// [GET]
+router.get('/check-owner-groups/:idGroups', AuthRouter, GroupController.checkOwnerGroups)
+
 module.exports = router

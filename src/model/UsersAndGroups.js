@@ -19,7 +19,7 @@ module.exports = class UsersAndGroups {
   }
 
   static getAllMember = (idGroups) => {
-    return db.execute('select `project_todolist`.`users`.* from `project_todolist`.`usersandgroups` join `project_todolist`.`users` on `project_todolist`.`usersandgroups`.idUsers = `project_todolist`.`users`.idUsers where idGroups = ?;',
+    return db.execute('select `project_todolist`.`users`.*, isAdmin from `project_todolist`.`usersandgroups` join `project_todolist`.`users` on `project_todolist`.`usersandgroups`.idUsers = `project_todolist`.`users`.idUsers where idGroups = ?;',
       [idGroups])
   }
 
@@ -30,6 +30,11 @@ module.exports = class UsersAndGroups {
 
   static deleteMember = (idGroups, idUsers) => {
     return db.execute('delete from usersAndGroups where idUsers = ? and idGroups = ?',
+      [idUsers, idGroups])
+  }
+
+  static checkOwnerGroups = (idGroups, idUsers) => {
+    return db.execute('select * from usersAndGroups where idUsers = ? and idGroups = ? and isAdmin = 1',
       [idUsers, idGroups])
   }
 }

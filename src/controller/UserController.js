@@ -260,7 +260,7 @@ class UserController {
   }
 
   checkTokenResetPassword = async (req, res, next) => {
-    let [id, idStatus] = validateStringNotEmpty(req.body.token)
+    let [id, idStatus] = validateStringNotEmpty(req.body.id)
     let [token, tokenStatus] = validateStringNotEmpty(req.body.token)
 
     if (!idStatus || !tokenStatus) {

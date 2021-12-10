@@ -58,6 +58,34 @@ class GroupController {
     res.status(200).json({})
   }
 
+  checkOwnerGroups = async (req, res, next) => {
+    const idUsers = req.idUsers
+
+    let [idGroups, idGroupsStatus] = validateNumber(req.params.idGroups)
+
+    if (!idGroupsStatus) {
+      return res.status(422).json({
+        code: 8840043,
+        message: 'IdGroups is required'
+      })
+    }
+
+    let arrayResult = []
+    await UsersAndGroups.checkOwnerGroups(idGroups, idUsers)
+      .then(([data]) => {
+        arrayResult = data
+      })
+
+    if (arrayResult.length === 0) {
+      return res.status(422).json({
+        code: 8840044,
+        message: 'User does not owner of the group'
+      })
+    }
+
+    res.status(200).json({})
+  }
+
   getAllGroups = async (req, res, next) => {
     const idUsers = req.idUsers
 
